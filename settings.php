@@ -24,8 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die;
 
-$ADMIN->add('reports', new admin_externalpage('reportactivitysettings', get_string('activitysettingsaudit', 'report_activitysettings'),
-    "$CFG->wwwroot/report/activitysettings/index.php"));
+$ADMIN->add('reports', new admin_externalpage('reportactivitysettings',
+    get_string('activitysettingsaudit', 'report_activitysettings'), "$CFG->wwwroot/report/activitysettings/index.php"));
 
 // No report settings.
 $settings = null;

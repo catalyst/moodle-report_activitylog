@@ -234,7 +234,7 @@ class activitysettings {
         global $DB;
 
         $sql = "
-            SELECT 
+            SELECT
                 id,
                 settings,
                 timemodified
@@ -246,7 +246,7 @@ class activitysettings {
 
         $params = [
             'activityid' => $activityid,
-            'deleted' => activitysettings::COURSE_MODULE_DELETED
+            'deleted' => self::COURSE_MODULE_DELETED
         ];
 
         $records = $DB->get_records_sql($sql, $params);

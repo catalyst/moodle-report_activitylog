@@ -81,7 +81,7 @@ function report_activitysettings_coursemodule_edit_post_actions($data, $course) 
 
         // Add any missing keys for comparison.
         // We need this as empty values and some special fields are sometimes removed.
-        foreach (array_merge(array_keys((array)$cmdata), array_keys((array)$previoussettings))  as $key) {
+        foreach (array_merge(array_keys((array)$cmdata), array_keys((array)$previoussettings)) as $key) {
             if (!isset($previoussettings->$key)) {
                 $previoussettings->$key = null;
             }

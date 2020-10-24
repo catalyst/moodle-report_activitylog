@@ -46,7 +46,7 @@ class report_activitysettings_renderer extends plugin_renderer_base {
         $sql = "SELECT DISTINCT
             activityid
             FROM {report_activitysettings}
-            WHERE changes != :initialstatus 
+            WHERE changes != :initialstatus
         ";
 
         $params['initialstatus'] = \report_activitysettings\activitysettings::SETTINGS_INITIAL;
