@@ -15,9 +15,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Event observer for report_activitysettings.
+ * Event observer for report_activitylog.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -25,41 +25,13 @@
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Event observer for report_activitysettings.
+ * Event observer for report_activitylog.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class report_activitysettings_observer {
-
-    /**
-     * Triggered via course_module_created event.
-     *
-     * @param \core\event\course_module_created $event
-     * @return bool true on success.
-     */
-    public static function course_module_created(\core\event\course_module_created $event) {
-        global $DB;
-
-        $cm = get_coursemodule_from_id('', $event->objectid);
-        $course = get_course($cm->course);
-
-        list($cm, $context, $module, $data, $cw) = get_moduleinfo_data($cm, $course);
-
-        $log = (object)[
-            'activityid' => $event->objectid,
-            'courseid' => $course->id,
-            'modifierid' => $event->userid,
-            'changes' => \report_activitysettings\activitysettings::COURSE_MODULE_CREATED,
-            'settings' => json_encode($data),
-            'timemodified' => $event->timecreated,
-        ];
-
-        $DB->insert_record('report_activitysettings', $log);
-
-        return true;
-    }
+class report_activitylog_observer {
 
     /**
      * Triggered via course_module_deleted event.
@@ -74,12 +46,12 @@ class report_activitysettings_observer {
             'activityid' => $event->objectid,
             'courseid' => $event->courseid,
             'modifierid' => $event->userid,
-            'changes' => \report_activitysettings\activitysettings::COURSE_MODULE_DELETED,
+            'changes' => \report_activitylog\activitylog::COURSE_MODULE_DELETED,
             'settings' => null,
             'timemodified' => $event->timecreated,
         ];
 
-        $DB->insert_record('report_activitysettings', $log);
+        $DB->insert_record('report_activitylog', $log);
 
         return true;
     }

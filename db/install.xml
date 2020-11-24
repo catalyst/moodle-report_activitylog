@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="report/activitysettings/db" VERSION="2020102100" COMMENT="XMLDB file for Activity Settings report"
+<XMLDB PATH="report/activitylog/db" VERSION="2020102100" COMMENT="XMLDB file for Activity Settings report"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="report_activitysettings" COMMENT="Log of changes to activity settings">
+    <TABLE NAME="report_activitylog" COMMENT="Log of changes to activity settings">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="activityid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="modifierid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="changetype" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="changes" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
-        <FIELD NAME="settings" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
@@ -21,6 +21,20 @@
         <INDEX NAME="activityid" UNIQUE="false" FIELDS="activityid"/>
         <INDEX NAME="courseid" UNIQUE="false" FIELDS="courseid"/>
         <INDEX NAME="modifierid" UNIQUE="false" FIELDS="modifierid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="report_activitylog_settings" COMMENT="Log of changes to activity settings">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="activityid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="settings" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="activityid" UNIQUE="false" FIELDS="activityid"/>
       </INDEXES>
     </TABLE>
   </TABLES>

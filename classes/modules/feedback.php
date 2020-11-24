@@ -15,17 +15,29 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Post install code.
+ * Manages the data for the activity settings audit report.
  *
  * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace report_activitylog\modules;
+
 defined('MOODLE_INTERNAL') || die;
 
-function xmldb_report_activitylog_install() {
-    $populatetask = new \report_activitylog\task\populate_activitylog_table();
-    \core\task\manager::queue_adhoc_task($populatetask);
-}
+/**
+ * Class that manages selected values as well as generates SQL for
+ * the activity settings audit report.
+ *
+ * @package    report_activitylog
+ * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class feedback extends module {
 
+    protected $modfilters = [
+        'page_after_submit_editor',
+    ];
+
+}

@@ -17,7 +17,7 @@
 /**
  * Callbacks for activity settings audit report.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -31,10 +31,10 @@ defined('MOODLE_INTERNAL') || die;
  * @param stdClass $course The course to object for the report
  * @param context $context The context of the course
  */
-function report_activitysettings_extend_navigation_course($navigation, $course, $context) {
-    if (has_capability('report/activitysettings:view', $context)) {
-        $url = new moodle_url('/report/activitysettings/index.php', array('id' => $course->id));
-        $navigation->add(get_string('pluginname', 'report_activitysettings'), $url, navigation_node::TYPE_SETTING,
+function report_activitylog_extend_navigation_course($navigation, $course, $context) {
+    if (has_capability('report/activitylog:view', $context)) {
+        $url = new moodle_url('/report/activitylog/index.php', array('id' => $course->id));
+        $navigation->add(get_string('pluginname', 'report_activitylog'), $url, navigation_node::TYPE_SETTING,
             null, null, new pix_icon('i/report', ''));
     }
 }
@@ -46,28 +46,43 @@ function report_activitysettings_extend_navigation_course($navigation, $course, 
  * @param stdClass $data Data from the form submission.
  * @param stdClass $course The course.
  */
-function report_activitysettings_coursemodule_edit_post_actions($data, $course) {
-    global $USER, $DB;
+function report_activitylog_coursemodule_edit_post_actions($data, $course) {
+    // TODO: Migrate logic into helper class.
+    $newsettings = clone $data;
 
-    $fromform = clone $data;
     $cm = get_coursemodule_from_id('', $data->coursemodule);
+    $previoussettings = \report_activitylog\activitylog::get_previous_settings($data->coursemodule);
+    $modulehelper = \report_activitylog\modules\module::get_module($cm->modname);
+
+    // Add any missing keys for comparison.
+    // We need this as empty values and some special fields are sometimes removed.
     list($cm, $context, $module, $cmdata, $cw) = get_moduleinfo_data($cm, $course);
 
-    $previoussettings = \report_activitysettings\activitysettings::get_previous_settings($data->coursemodule);
+    $fields = array_unique(
+        array_merge(
+            array_keys((array)$cmdata),
+            array_keys((array)$previoussettings),
+            array_keys((array)$newsettings)
+        )
+    );
+
+    // Clean fields that we don't need from the submitted data.
+    $filter = $modulehelper->get_filters();
+    unset($newsettings->displayoptions);
+
+    foreach ($fields as $key => $field) {
+        if (in_array($field, $filter) || strpos($field, 'mform_') !== false) {
+            unset($newsettings->$field);
+            unset($fields[$key]);
+            continue;
+        }
+
+        if (!array_key_exists($field, $newsettings) && array_key_exists($field, $cmdata)) {
+            $newsettings->$field = $cmdata->$field;
+        }
+    }
 
     if ($previoussettings) {
-
-        $filter = [
-            'assignfeedback_comments_commentinline',
-            'gradingman',
-            'introattachments',
-            'revision',
-            'timemodified',
-            'showgradingmanagement',
-            'files',
-            'page_after_submit_editor',
-            '',
-        ];
 
         $fileareas = [
             'content',
@@ -76,83 +91,50 @@ function report_activitysettings_coursemodule_edit_post_actions($data, $course) 
             'package',
             'mediafile'
         ];
-
         $changes = [];
 
-        // Add any missing keys for comparison.
-        // We need this as empty values and some special fields are sometimes removed.
-        foreach (array_merge(array_keys((array)$cmdata), array_keys((array)$previoussettings)) as $key) {
-            if (!isset($previoussettings->$key)) {
-                $previoussettings->$key = null;
-            }
-            if (!isset($fromform->$key)) {
-                $fromform->$key = null;
-            }
-        }
-
-        // Prepare mod page content for comparison.
-        if ($cm->modname == 'page') {
-            $filter[] = 'page';
-            unset($previoussettings->displayoptions);
-        }
-
-        // Prepare mod quiz content for comparison.
-        if ($cm->modname == 'quiz') {
-            $filter[] = 'feedbacktext';
-            $filter[] = 'feedbackboundaries';
-            $filter[] = 'boundary_repeats';
-            unset($previoussettings->displayoptions);
-        }
-
-        // Prepare mod quiz content for comparison.
-        if ($cm->modname == 'workshop') {
-            $filter[] = 'mform_isexpanded_id_gradingsettings';
-            $filter[] = 'instructauthorseditor';
-            $filter[] = 'instructreviewerseditor';
-            $filter[] = 'conclusioneditor';
-            unset($previoussettings->displayoptions);
-        }
-
-        // Prepare scorm content for comparison.
-        if ($cm->modname == 'scorm') {
-            $filter[] = 'launch';
-            $filter[] = 'package';
-            $filter[] = 'packagefile';
-            $filter[] = 'reference';
-            $fileareas[] = ['packagefile'];
-            $fileareas[] = ['packagefile'];
-        }
-
-        foreach ($previoussettings as $key => $setting) {
-            if (in_array($key, $filter) || strpos('mform_', $key) !== false) {
-                continue;
-            }
+        foreach ($fields as $field) {
 
             // Ignore individual parameters in url mod.
-            if ($cm->modname == 'url' &&
-                    (strpos($key, 'parameter_') !== false || strpos($key, 'variable_') !== false)) {
+            if ($cm->modname == 'url'
+                    && (strpos($field, 'parameter_') !== false || strpos($field, 'variable_') !== false)) {
+                unset($newsettings->$field);
                 continue;
             }
 
-            if (!isset($fromform->$key)) {
-                if (strpos($key, 'assignfeedback_') !== false) {
-                    if (!in_array('assignfeedback', $changes)) {
-                        $changes[] = 'assignfeedback';
-                    }
+            if (!array_key_exists($field, $previoussettings)) {
+                if (array_key_exists($field, $newsettings)) {
+                    $changes[$field] = [
+                        'updated' => $newsettings->$field
+                    ];
                 }
-            } else if (isset($fromform->$key) && $fromform->$key != $setting) {
-                if ($key == 'availabilityconditionsjson') {
-                    if ($setting == null) {
+
+                continue;
+            }
+
+            $previoussetting = array_key_exists($field, $previoussettings) ? $previoussettings->$field : null;
+
+            if (array_key_exists($field, $newsettings) && $newsettings->$field != $previoussetting) {
+                if ($field == 'availabilityconditionsjson') {
+                    if (is_null($previoussetting)) {
                         // Special case to check if availability conditions have actually changed from initial value.
-                        $tree = new \core_availability\tree(json_decode($fromform->$key));
+                        $tree = new \core_availability\tree(json_decode($newsettings->$field));
                         if (!$tree->is_empty()) {
-                            $changes[] = $key;
+                            $changes[] = $field;
                         }
                     } else {
-                        $changes[] = $key;
+                        $changes[] = $field;
                     }
                 } else {
-                    $changes[] = $key;
+                    if (!is_object($newsettings->$field) && !is_array($newsettings->$field)) {
+                        $change = ['updated' => $newsettings->$field];
+                        if (!empty($previoussetting)) {
+                            $change['previous'] = $previoussetting;
+                        }
+                        $changes[$field] = $change;
+                    } else {
+                        $changes[] = $field;
+                    }
                 }
             }
         }
@@ -172,14 +154,14 @@ function report_activitysettings_coursemodule_edit_post_actions($data, $course) 
 
         if ($updatedfiles) {
             foreach ($updatedfiles as $file) {
-                if (!in_array($file->get_filearea(), $changes)) {
+                if (!isset($changes['fileareas']) || !in_array($file->get_filearea(), $changes['fileareas'])) {
                     if ($file->get_component() == 'mod_scorm') {
                         // SCORM timemodified always gets updated. Use time created.
                         if ($file->get_timecreated() > $previoussettings->timemodified) {
-                            $changes[] = $file->get_filearea();
+                            $changes['fileareas'][] = $file->get_filearea();
                         }
                     } else {
-                        $changes[] = $file->get_filearea();
+                        $changes['fileareas'][] = $file->get_filearea();
                     }
                 }
             }
@@ -187,17 +169,20 @@ function report_activitysettings_coursemodule_edit_post_actions($data, $course) 
 
         // Log any changes.
         if ($changes) {
-            $log = (object)[
-                'activityid' => $data->coursemodule,
-                'courseid' => $course->id,
-                'modifierid' => $USER->id,
-                'changes' => json_encode($changes),
-                'settings' => json_encode($data),
-                'timemodified' => $data->timemodified ?? time(),
-            ];
-
-            $DB->insert_record('report_activitysettings', $log);
+            \report_activitylog\activitylog::log_changes(
+                $data->coursemodule,
+                $course->id,
+                $changes,
+                $newsettings
+            );
         }
+    } else {
+        \report_activitylog\activitylog::log_changes(
+            $data->coursemodule,
+            $course->id,
+            [],
+            $newsettings
+        );
     }
 
     return $data;

@@ -15,19 +15,44 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Activity settings audit report observers.
+ * Activity log filters.
  *
  * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace report_activitylog\form;
+
 defined('MOODLE_INTERNAL') || die();
 
-// List of observers.
-$observers = array(
-    array(
-        'eventname'   => '\core\event\course_module_deleted',
-        'callback'    => 'report_activitylog_observer::course_module_deleted',
-    ),
-);
+require_once($CFG->libdir.'/formslib.php');
+
+/**
+ * Activity log filters form.
+ *
+ * @package    report_activitylog
+ * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class filters extends \moodleform {
+    /**
+     * Form definition
+     *
+     * @throws \coding_exception
+     */
+    public function definition() {
+        $mform = $this->_form;
+
+        // Firstname.
+        $mform->addElement('text', 'coursename', get_string('course'));
+        $mform->setType('coursename', PARAM_TEXT);
+
+        // Lastname.
+        $mform->addElement('text', 'courseidnumber', get_string('courseidnumber', 'report_activitylog'));
+        $mform->setType('courseidnumber', PARAM_TEXT);
+
+        $this->add_action_buttons(false, get_string('search'));
+
+    }
+}

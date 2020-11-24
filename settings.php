@@ -17,15 +17,15 @@
 /**
  * Report settings.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die;
 
-$ADMIN->add('reports', new admin_externalpage('reportactivitysettings',
-    get_string('activitysettingsaudit', 'report_activitysettings'), "$CFG->wwwroot/report/activitysettings/index.php"));
+$ADMIN->add('reports', new admin_externalpage('reportactivitylog',
+    get_string('activitylogaudit', 'report_activitylog'), "$CFG->wwwroot/report/activitylog/index.php"));
 
 // No report settings.
 $settings = null;

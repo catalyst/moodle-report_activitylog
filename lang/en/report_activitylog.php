@@ -15,9 +15,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'report_activitysettings'.
+ * Strings for component 'report_activitylog'.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -25,12 +25,15 @@
 
 $string['changedby'] = 'Changed by';
 $string['changes'] = 'Changes';
-$string['activitysettingsaudit'] = 'Activity settings audit';
+$string['activitylogaudit'] = 'Activity settings changes';
+$string['courseidnumber'] = 'Course ID number';
 $string['coursemodulecreated'] = 'Course module created';
 $string['coursemoduledeleted'] = 'Course module deleted';
+$string['false'] = 'false';
+$string['filesadded'] = 'Files added to {$a}';
 $string['form:coursename'] = 'Course name';
 $string['module'] = 'Module';
-$string['pluginname'] = 'Activity settings audit';
+$string['pluginname'] = 'Activity settings changes';
 $string['setting:advancedgradingmethod'] = 'Grading method';
 $string['setting:approval'] = 'Approval';
 $string['setting:availabilityconditionsjson'] = 'Availability';
@@ -94,3 +97,7 @@ $string['setting:timeviewto'] = 'Time view to';
 $string['setting:type'] = 'Type';
 $string['settingupdated'] = '{$a} updated';
 $string['timemodified'] = 'Time modified';
+$string['true'] = 'true';
+$string['updated'] = '{$a} settings updated';
+$string['valuefromto'] = 'changed from <code>{$a->previous}</code> to <code>{$a->updated}</code>';
+$string['valueto'] = 'changed to <code>{$a->updated}</code>';

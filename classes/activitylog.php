@@ -17,12 +17,12 @@
 /**
  * Manages the data for the activity settings audit report.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace report_activitysettings;
+namespace report_activitylog;
 
 defined('MOODLE_INTERNAL') || die;
 
@@ -32,15 +32,16 @@ use context;
  * Class that manages selected values as well as generates SQL for
  * the activity settings audit report.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class activitysettings {
+class activitylog {
 
     const SETTINGS_INITIAL = 0;
     const COURSE_MODULE_CREATED = 1;
-    const COURSE_MODULE_DELETED = 2;
+    const COURSE_MODULE_UPDATED = 2;
+    const COURSE_MODULE_DELETED = 3;
 
     /** @var context context of the report */
     protected $context;
@@ -56,6 +57,9 @@ class activitysettings {
 
     /** @var array parameters for filtering the report */
     protected $params;
+
+    /** @var array filters */
+    protected $filters;
 
     /**
      * Set up the activity settings class.
@@ -106,18 +110,18 @@ class activitysettings {
         if ($this->courseid) {
             // Exclude the course column.
             return [
-                get_string('module', 'report_activitysettings'),
-                get_string('changes', 'report_activitysettings'),
-                get_string('changedby', 'report_activitysettings'),
-                get_string('timemodified', 'report_activitysettings'),
+                get_string('module', 'report_activitylog'),
+                get_string('changes', 'report_activitylog'),
+                get_string('changedby', 'report_activitylog'),
+                get_string('timemodified', 'report_activitylog'),
             ];
         }
         return [
-            get_string('module', 'report_activitysettings'),
+            get_string('module', 'report_activitylog'),
             get_string('course'),
-            get_string('changes', 'report_activitysettings'),
-            get_string('changedby', 'report_activitysettings'),
-            get_string('timemodified', 'report_activitysettings'),
+            get_string('changes', 'report_activitylog'),
+            get_string('changedby', 'report_activitylog'),
+            get_string('timemodified', 'report_activitylog'),
         ];
     }
 
@@ -134,7 +138,8 @@ class activitysettings {
             c.fullname AS coursename,
             ra.changes,
             modifierid,
-            ra.timemodified
+            ra.timemodified,
+            changetype
         ";
     }
 
@@ -144,7 +149,7 @@ class activitysettings {
      * @return string
      */
     public function get_from_sql() {
-        return "{report_activitysettings} ra
+        return "{report_activitylog} ra
                     JOIN {course} c ON c.id = ra.courseid";
     }
 
@@ -175,6 +180,16 @@ class activitysettings {
         if ($this->modid) {
             $where .= " AND ra.activityid = :modid";
             $this->params['modid'] = $this->modid;
+        }
+
+        if (isset($this->filters['coursename'])) {
+            $where .= " AND LOWER(c.fullname) LIKE :coursename";
+            $this->params['coursename'] = '%'.strtolower($this->filters['coursename']).'%';
+        }
+
+        if (isset($this->filters['courseidnumber'])) {
+            $where .= " AND LOWER(c.idnumber) LIKE :courseidnumber";
+            $this->params['courseidnumber'] = '%'.strtolower($this->filters['courseidnumber']).'%';
         }
 
         return $where;
@@ -222,7 +237,7 @@ class activitysettings {
      * @return string
      */
     public function get_filename() {
-        return 'activitysettingsaudit_' . userdate(time(), get_string('backupnameformat', 'langconfig'), 99, false);
+        return 'activitylogaudit_' . userdate(time(), get_string('backupnameformat', 'langconfig'), 99, false);
     }
 
     /**
@@ -233,32 +248,65 @@ class activitysettings {
     public static function get_previous_settings($activityid) {
         global $DB;
 
-        $sql = "
-            SELECT
-                id,
-                settings,
-                timemodified
-            FROM {report_activitysettings}
-            WHERE activityid = :activityid
-                AND changes != :deleted
-            ORDER BY timemodified DESC;
-        ";
+        $record = $DB->get_record('report_activitylog_settings', ['activityid' => $activityid]);
 
-        $params = [
-            'activityid' => $activityid,
-            'deleted' => self::COURSE_MODULE_DELETED
-        ];
-
-        $records = $DB->get_records_sql($sql, $params);
-
-        $previous = array_shift($records);
-        if ($previous) {
-            $settings = json_decode($previous->settings);
-            $settings->timemodified = $previous->timemodified;
+        if ($record) {
+            $settings = json_decode($record->settings);
+            $settings->timemodified = $record->timemodified;
             return $settings;
         }
 
         return false;
     }
 
+    /**
+     * Converts a setting to be more human readable.
+     * I.e. convert value to a date, or a bool to true/false.
+     *
+     * @param string $setting name of the setting
+     * @param mixed $value the stored value for the setting
+     * @param mixed $modulename module name (i.e 'forum', 'url')
+     * @return string formatted output
+     */
+    public static function get_formatted_value($setting, $value, $modulename) {
+        $module = \report_activitylog\modules\module::get_module($modulename);
+        return $module->get_value($setting, $value);
+    }
+
+    public static function log_changes($activityid, $courseid, $changes, $newsettings, $timemodified = false) {
+        global $DB, $USER;
+
+        $settingsrecord = $DB->get_record('report_activitylog_settings', ['activityid' => $activityid]);
+
+        if ($settingsrecord) {
+            $settingsrecord->settings = json_encode($newsettings);
+            $settingsrecord->timemodified = time();
+            $DB->update_record('report_activitylog_settings', $settingsrecord);
+        } else {
+            $settingsrecord = (object)[
+                'activityid' => $activityid,
+                'settings' => json_encode($newsettings),
+                'timemodified' => time(),
+            ];
+            $DB->insert_record('report_activitylog_settings', $settingsrecord);
+        }
+
+        $time = $timemodified ? $timemodified : time();
+        $changetype = isset($settingsrecord->id) ? self::COURSE_MODULE_UPDATED : self::COURSE_MODULE_CREATED;
+
+        $log = (object)[
+            'activityid' => $activityid,
+            'courseid' => $courseid,
+            'modifierid' => $USER->id,
+            'changes' => json_encode($changes),
+            'changetype' => $changetype,
+            'timemodified' => $time,
+        ];
+
+        $DB->insert_record('report_activitylog', $log);
+    }
+
+    public function set_filters($filters) {
+        $this->filters = $filters;
+    }
 }

@@ -17,16 +17,16 @@
 /**
  * Table definition for the activity settings audit report.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace report_activitysettings\output;
+namespace report_activitylog\output;
 
 defined('MOODLE_INTERNAL') || die;
 
-use report_activitysettings\activitysettings;
+use report_activitylog\activitylog;
 use table_sql;
 
 require_once("$CFG->libdir/tablelib.php");
@@ -34,7 +34,7 @@ require_once("$CFG->libdir/tablelib.php");
 /**
  * Class that manages how data is displayed in the activity settings audit report.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -57,83 +57,92 @@ class report_table extends table_sql {
      * @return  string
      */
     public function col_changes($row) {
+        // TODO: Migrate this logic to helper class.
 
         // Check if we need to work out the changes.
-        switch ($row->changes) {
-            case activitysettings::COURSE_MODULE_CREATED:
-                return get_string('coursemodulecreated', 'report_activitysettings');
-            case activitysettings::COURSE_MODULE_DELETED:
-                return get_string('coursemoduledeleted', 'report_activitysettings');
+        switch ($row->changetype) {
+            case activitylog::COURSE_MODULE_CREATED:
+                return get_string('coursemodulecreated', 'report_activitylog');
+            case activitylog::COURSE_MODULE_DELETED:
+                return get_string('coursemoduledeleted', 'report_activitylog');
         }
 
         $stringmanager = get_string_manager();
         $changes = [];
-        $assignmentfeedbackchanged = false;
-        $assignmentsubmissionchanged = false;
-        foreach (json_decode($row->changes) as $change) {
+
+        foreach (json_decode($row->changes) as $key => $change) {
+            $str = '';
+
+            if (!is_object($change) && !is_array($change)) {
+                $key = $change;
+            }
+
+            if ($key == 'fileareas') {
+                foreach ($change as $filearea) {
+                    $changes[] = get_string('filesadded', 'report_activitylog', $filearea);
+                }
+                continue;
+            }
 
             // Special case for advanced grading.
-            if (strpos($change, 'advancedgradingmethod_') !== false) {
-                $changes[] = get_string('setting:gradingman', 'report_activitysettings');
-                continue;
+            if (!$str && strpos($key, 'advancedgradingmethod_') !== false) {
+                $str = get_string('setting:gradingman', 'report_activitylog');
             }
 
-            // Change to assignment feedback settings.
-            if (strpos($change, 'assignfeedback_') !== false) {
-                $assignmentfeedbackchanged = true;
-                continue;
-            }
-            // Change to assignment submission settings.
-            if (strpos($change, 'assignsubmission_') !== false) {
-                $assignmentsubmissionchanged = true;
-                continue;
-            }
             // Change to grade settings.
-            if (strpos($change, 'gradepass_') !== false) {
-                get_string('setting:gradepass', 'report_activitysettings');
-                continue;
+            if (!$str && strpos($key, 'gradepass_') !== false) {
+                $str = get_string('setting:gradepass', 'report_activitylog');
             }
 
             $cm = get_coursemodule_from_id('', $row->activityid);
-            if (str_replace('_'.$cm->modname, '', $change) == 'grade') {
-                $changes[] = get_string('setting:grade', 'report_activitysettings');
-                continue;
+            if (!$str && str_replace('_'.$cm->modname, '', $key) == 'grade') {
+                $str = get_string('setting:grade', 'report_activitylog');
             }
 
             // Is it defined in the report plugin?
-            if ($stringmanager->string_exists('setting:'.$change, 'report_activitysettings')) {
-                $changes[] = get_string('setting:'.$change, 'report_activitysettings');
-                continue;
+            if (!$str && $stringmanager->string_exists('setting:'.$key, 'report_activitylog')) {
+                $str = get_string('setting:'.$key, 'report_activitylog');
             }
 
             // Has the module defined the string?
-            if ($stringmanager->string_exists($change, $cm->modname)) {
-                $changes[] = get_string($change, $cm->modname);
-                continue;
+            if (!$str && $stringmanager->string_exists($key, $cm->modname)) {
+                $str = get_string($key, $cm->modname);
             }
-            if ($stringmanager->string_exists('config'.$change, $cm->modname)) {
-                $changes[] = get_string('config'.$change, $cm->modname);
-                continue;
+            if (!$str && $stringmanager->string_exists('config'.$key, $cm->modname)) {
+                $str = get_string('config'.$key, $cm->modname);
             }
 
             // Check core.
-            if ($stringmanager->string_exists($change, '')) {
-                $changes[] = get_string($change);
-                continue;
+            if (!$str && $stringmanager->string_exists($key, '')) {
+                $str = get_string($key);
             }
 
-            // Fall back to the key.
-            $changes[] = $change;
+            if (!$str) {
+                // Fall back to the key.
+                $str = $key;
+            }
+
+            if (isset($change->updated)) {
+                $change->updated = activitylog::get_formatted_value($key, $change->updated, $cm->modname);
+
+                if (isset($change->previous)) {
+                    $change->previous = activitylog::get_formatted_value($key, $change->previous, $cm->modname);
+
+                    $str .= ' ' . get_string('valuefromto', 'report_activitylog', $change);
+                } else {
+                    $str .= ' ' . get_string('valueto', 'report_activitylog', $change);
+                }
+                $changes[$key] = $str;
+            } else {
+                $changes[] = get_string('updated', 'report_activitylog', $str);;
+            }
         }
 
-        if ($assignmentfeedbackchanged) {
-            $changes[] = get_string('setting:assignfeedback', 'report_activitysettings');
+        if (count($changes) === 1) {
+            return array_shift($changes);
+        } else {
+            return \html_writer::alist($changes);
         }
-        if ($assignmentsubmissionchanged) {
-            $changes[] = get_string('setting:assignsubmission', 'report_activitysettings');
-        }
-
-        return \html_writer::alist($changes);
     }
 
     /**
@@ -161,7 +170,7 @@ class report_table extends table_sql {
             return $cm->name;
         } else {
             // Module likely deleted, try to get last value from logs.
-            $prevsettings = activitysettings::get_previous_settings($row->activityid);
+            $prevsettings = activitylog::get_previous_settings($row->activityid);
 
             if ($prevsettings) {
                 return $prevsettings->name;
@@ -178,9 +187,9 @@ class report_table extends table_sql {
      * @return  string
      */
     public function col_coursename($row) {
-        return \html_writer::link(
-            new \moodle_url('/report/activitysettings/index.php', ['id' => $row->courseid]),
-            $row->coursename
-        );
+        if ($this->download) {
+            return $row->coursename;
+        }
+        return \html_writer::link(course_get_url($row->courseid), $row->coursename);
     }
 }

@@ -17,39 +17,43 @@
 /**
  * Renderer for activity settings audit report.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use report_activitysettings\activitysettings;
+use report_activitylog\activitylog;
 
 defined('MOODLE_INTERNAL') || die();
 
 /**
  * Renderer class for activity settings audit report.
  *
- * @package    report_activitysettings
+ * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class report_activitysettings_renderer extends plugin_renderer_base {
+class report_activitylog_renderer extends plugin_renderer_base {
+
+    public function print_course_filter($report) {
+
+    }
 
     /**
      * Output the module selector for the activity settings audit report.
      *
-     * @param \report_activitysettings\activitysettings $report
+     * @param \report_activitylog\activitylog $report
      */
     public function print_activity_selector($report) {
         global $DB;
 
         $sql = "SELECT DISTINCT
             activityid
-            FROM {report_activitysettings}
+            FROM {report_activitylog}
             WHERE changes != :initialstatus
         ";
 
-        $params['initialstatus'] = \report_activitysettings\activitysettings::SETTINGS_INITIAL;
+        $params['initialstatus'] = \report_activitylog\activitylog::SETTINGS_INITIAL;
 
         if ($report->get_courseid()) {
             $sql .= " AND courseid = :courseid";
@@ -64,7 +68,7 @@ class report_activitysettings_renderer extends plugin_renderer_base {
                 $modules[$mod->activityid] = $cm->name;
             } else {
                 // Deleted module.
-                $prevsettings = activitysettings::get_previous_settings($mod->activityid);
+                $prevsettings = activitylog::get_previous_settings($mod->activityid);
                 if ($prevsettings) {
                     $modules[] = $prevsettings->name;
                 }
@@ -72,10 +76,10 @@ class report_activitysettings_renderer extends plugin_renderer_base {
         }
         $rs->close();
 
-        $modules = [0 => get_string('none')] + $modules;
+        $modules = [0 => get_string('all')] + $modules;
 
         $select = new single_select(new moodle_url($report->get_baseurl()), 'modid', $modules, $report->get_modid(), null);
-        $select->set_label(get_string('module', 'report_activitysettings'));
+        $select->set_label(get_string('module', 'report_activitylog'));
         echo $this->output->render($select);
     }
 }
