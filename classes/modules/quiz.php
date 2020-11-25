@@ -15,7 +15,8 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Manages the data for the activity settings audit report.
+ * Helper for specific modules that require workarounds. I.e.
+ * filtering of fields that we don't want to track.
  *
  * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
@@ -27,8 +28,7 @@ namespace report_activitylog\modules;
 defined('MOODLE_INTERNAL') || die;
 
 /**
- * Class that manages selected values as well as generates SQL for
- * the activity settings audit report.
+ * Class to manage filtered fields/file areas for 'quiz' activities.
  *
  * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}

@@ -28,4 +28,3 @@ function xmldb_report_activitylog_install() {
     $populatetask = new \report_activitylog\task\populate_activitylog_table();
     \core\task\manager::queue_adhoc_task($populatetask);
 }
-

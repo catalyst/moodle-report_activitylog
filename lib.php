@@ -41,111 +41,80 @@ function report_activitylog_extend_navigation_course($navigation, $course, $cont
 
 /**
  * Go over the settings for a course module and determine if any
- * have changed. Updates the log if any changes were made.
+ * have changed. Updates the log if any changes were made or if
+ * adds the initial record if the activity is being newly added.
  *
  * @param stdClass $data Data from the form submission.
  * @param stdClass $course The course.
  */
 function report_activitylog_coursemodule_edit_post_actions($data, $course) {
-    // TODO: Migrate logic into helper class.
-    $newsettings = clone $data;
 
     $cm = get_coursemodule_from_id('', $data->coursemodule);
     $previoussettings = \report_activitylog\activitylog::get_previous_settings($data->coursemodule);
     $modulehelper = \report_activitylog\modules\module::get_module($cm->modname);
-
-    // Add any missing keys for comparison.
-    // We need this as empty values and some special fields are sometimes removed.
     list($cm, $context, $module, $cmdata, $cw) = get_moduleinfo_data($cm, $course);
 
+    // Get all potential settings fields.
     $fields = array_unique(
         array_merge(
             array_keys((array)$cmdata),
             array_keys((array)$previoussettings),
-            array_keys((array)$newsettings)
+            array_keys((array)$data)
         )
     );
 
-    // Clean fields that we don't need from the submitted data.
-    $filter = $modulehelper->get_filters();
-    unset($newsettings->displayoptions);
+    // Remove any fields to ignore, i.e. 'id', fields starting 'mform_'.
+    $fields = $modulehelper->remove_filtered_fields($fields);
 
-    foreach ($fields as $key => $field) {
-        if (in_array($field, $filter) || strpos($field, 'mform_') !== false) {
-            unset($newsettings->$field);
-            unset($fields[$key]);
-            continue;
+    $newsettings = new stdClass();
+    $changes = [];
+
+    foreach ($fields as $field) {
+        // Get the value from the form if submitted or check the DB value.
+        if (!array_key_exists($field, $data) && array_key_exists($field, $cmdata)) {
+            // Not available from the submitted form, get from course module settings.
+            $newsettings->$field = $cmdata->$field;
+        } else if (array_key_exists($field, $data)) {
+            // Use submitted form value.
+            $newsettings->$field = $data->$field;
         }
 
-        if (!array_key_exists($field, $newsettings) && array_key_exists($field, $cmdata)) {
-            $newsettings->$field = $cmdata->$field;
+        // Check to see if the value has been updated.
+        if ($previoussettings) {
+            // Not a setting that's been seen before.
+            // Mark as updated.
+            if (!array_key_exists($field, $previoussettings)) {
+                $changes[$field] = [
+                    'updated' => $newsettings->$field
+                ];
+
+                continue;
+            }
+
+            $previoussetting = $previoussettings->$field ?? null;
+
+            if (array_key_exists($field, $newsettings) && $newsettings->$field != $previoussetting) {
+                if (!is_object($newsettings->$field) && !is_array($newsettings->$field)) {
+                    $change = ['updated' => $newsettings->$field];
+                    if (!empty($previoussetting)) {
+                        $change['previous'] = $previoussetting;
+                    }
+                    $changes[$field] = $change;
+                } else {
+                    $changes[] = $field;
+                }
+            }
         }
     }
 
     if ($previoussettings) {
-
-        $fileareas = [
-            'content',
-            'intro',
-            'introattachment',
-            'package',
-            'mediafile'
-        ];
-        $changes = [];
-
-        foreach ($fields as $field) {
-
-            // Ignore individual parameters in url mod.
-            if ($cm->modname == 'url'
-                    && (strpos($field, 'parameter_') !== false || strpos($field, 'variable_') !== false)) {
-                unset($newsettings->$field);
-                continue;
-            }
-
-            if (!array_key_exists($field, $previoussettings)) {
-                if (array_key_exists($field, $newsettings)) {
-                    $changes[$field] = [
-                        'updated' => $newsettings->$field
-                    ];
-                }
-
-                continue;
-            }
-
-            $previoussetting = array_key_exists($field, $previoussettings) ? $previoussettings->$field : null;
-
-            if (array_key_exists($field, $newsettings) && $newsettings->$field != $previoussetting) {
-                if ($field == 'availabilityconditionsjson') {
-                    if (is_null($previoussetting)) {
-                        // Special case to check if availability conditions have actually changed from initial value.
-                        $tree = new \core_availability\tree(json_decode($newsettings->$field));
-                        if (!$tree->is_empty()) {
-                            $changes[] = $field;
-                        }
-                    } else {
-                        $changes[] = $field;
-                    }
-                } else {
-                    if (!is_object($newsettings->$field) && !is_array($newsettings->$field)) {
-                        $change = ['updated' => $newsettings->$field];
-                        if (!empty($previoussetting)) {
-                            $change['previous'] = $previoussetting;
-                        }
-                        $changes[$field] = $change;
-                    } else {
-                        $changes[] = $field;
-                    }
-                }
-            }
-        }
-
         // Check fileareas for updates.
         $context = context_module::instance($cm->id);
         $fs = get_file_storage();
         $updatedfiles = $fs->get_area_files(
             $context->id,
             'mod_'.$cm->modname,
-            $fileareas,
+            $modulehelper->get_fileareas(),
             false,
             "filearea, timemodified DESC",
             false,
@@ -177,10 +146,11 @@ function report_activitylog_coursemodule_edit_post_actions($data, $course) {
             );
         }
     } else {
+        // Add new activity.
         \report_activitylog\activitylog::log_changes(
             $data->coursemodule,
             $course->id,
-            [],
+            $changes,
             $newsettings
         );
     }

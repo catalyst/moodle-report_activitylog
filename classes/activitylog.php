@@ -133,13 +133,14 @@ class activitylog {
     public function get_fields_sql() {
         return "
             ra.id,
-            courseid,
-            activityid,
+            ra.courseid,
+            ra.activityid,
             c.fullname AS coursename,
             ra.changes,
-            modifierid,
+            ra.modifierid,
             ra.timemodified,
-            changetype
+            ra.changetype,
+            m.name AS modname
         ";
     }
 
@@ -150,7 +151,9 @@ class activitylog {
      */
     public function get_from_sql() {
         return "{report_activitylog} ra
-                    JOIN {course} c ON c.id = ra.courseid";
+           JOIN {course} c ON c.id = ra.courseid
+           JOIN {course_modules} cm ON ra.activityid = cm.id
+           JOIN {modules} m on cm.module = m.id";
     }
 
     /**

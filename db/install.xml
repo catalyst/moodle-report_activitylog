@@ -23,7 +23,7 @@
         <INDEX NAME="modifierid" UNIQUE="false" FIELDS="modifierid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="report_activitylog_settings" COMMENT="Log of changes to activity settings">
+    <TABLE NAME="report_activitylog_settings" COMMENT="Last seen settings for an activity">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="activityid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>

@@ -35,10 +35,6 @@ defined('MOODLE_INTERNAL') || die();
  */
 class report_activitylog_renderer extends plugin_renderer_base {
 
-    public function print_course_filter($report) {
-
-    }
-
     /**
      * Output the module selector for the activity settings audit report.
      *

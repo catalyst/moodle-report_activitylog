@@ -57,8 +57,6 @@ class report_table extends table_sql {
      * @return  string
      */
     public function col_changes($row) {
-        // TODO: Migrate this logic to helper class.
-
         // Check if we need to work out the changes.
         switch ($row->changetype) {
             case activitylog::COURSE_MODULE_CREATED:
@@ -77,39 +75,17 @@ class report_table extends table_sql {
                 $key = $change;
             }
 
-            if ($key == 'fileareas') {
-                foreach ($change as $filearea) {
-                    $changes[] = get_string('filesadded', 'report_activitylog', $filearea);
-                }
-                continue;
-            }
-
-            // Special case for advanced grading.
-            if (!$str && strpos($key, 'advancedgradingmethod_') !== false) {
-                $str = get_string('setting:gradingman', 'report_activitylog');
-            }
-
-            // Change to grade settings.
-            if (!$str && strpos($key, 'gradepass_') !== false) {
-                $str = get_string('setting:gradepass', 'report_activitylog');
-            }
-
-            $cm = get_coursemodule_from_id('', $row->activityid);
-            if (!$str && str_replace('_'.$cm->modname, '', $key) == 'grade') {
-                $str = get_string('setting:grade', 'report_activitylog');
-            }
-
             // Is it defined in the report plugin?
             if (!$str && $stringmanager->string_exists('setting:'.$key, 'report_activitylog')) {
                 $str = get_string('setting:'.$key, 'report_activitylog');
             }
 
             // Has the module defined the string?
-            if (!$str && $stringmanager->string_exists($key, $cm->modname)) {
-                $str = get_string($key, $cm->modname);
+            if (!$str && $stringmanager->string_exists($key, $row->modname)) {
+                $str = get_string($key, $row->modname);
             }
-            if (!$str && $stringmanager->string_exists('config'.$key, $cm->modname)) {
-                $str = get_string('config'.$key, $cm->modname);
+            if (!$str && $stringmanager->string_exists('config'.$key, $row->modname)) {
+                $str = get_string('config'.$key, $row->modname);
             }
 
             // Check core.
@@ -123,10 +99,10 @@ class report_table extends table_sql {
             }
 
             if (isset($change->updated)) {
-                $change->updated = activitylog::get_formatted_value($key, $change->updated, $cm->modname);
+                $change->updated = activitylog::get_formatted_value($key, $change->updated, $row->modname);
 
                 if (isset($change->previous)) {
-                    $change->previous = activitylog::get_formatted_value($key, $change->previous, $cm->modname);
+                    $change->previous = activitylog::get_formatted_value($key, $change->previous, $row->modname);
 
                     $str .= ' ' . get_string('valuefromto', 'report_activitylog', $change);
                 } else {

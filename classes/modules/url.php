@@ -28,16 +28,17 @@ namespace report_activitylog\modules;
 defined('MOODLE_INTERNAL') || die;
 
 /**
- * Class to manage filtered fields/file areas for 'survey' activities.
+ * Class to manage filtered fields/file areas for 'url' activities.
  *
  * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class survey extends module {
+class url extends module {
 
     protected $modfilters = [
-        'questions',
+        'parameter_*',
+        'variable_*',
     ];
 
 }

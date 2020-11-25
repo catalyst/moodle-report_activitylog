@@ -15,7 +15,8 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Manages the data for the activity settings audit report.
+ * Helper for specific modules that require workarounds. I.e.
+ * filtering of fields that we don't want to track.
  *
  * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
@@ -29,8 +30,7 @@ defined('MOODLE_INTERNAL') || die;
 require_once($CFG->dirroot.'/rating/lib.php');
 
 /**
- * Class that manages selected values as well as generates SQL for
- * the activity settings audit report.
+ * Base class to manage filtered fields/file areas for modules.
  *
  * @package    report_activitylog
  * @copyright  2020 Catalyst IT {@link http://www.catalyst.net.nz}
@@ -38,9 +38,18 @@ require_once($CFG->dirroot.'/rating/lib.php');
  */
 class module {
 
+    /**
+     * @var array module specific filters.
+     */
     protected $modfilters = [];
+    /**
+     * @var array module specific fileareas.
+     */
     protected $modfileareas = [];
 
+    /**
+     * @var string[] filters to apply to all modules. Supports '*' as a wildcard.
+     */
     private $basefilters = [
         'id',
         'timemodified',
@@ -68,10 +77,26 @@ class module {
         '_advancedgradingdata',
         'displayoptions',
         'gradingman',
+
+        // Wildcard exclusions.
+        'mform_*',
     ];
 
     /**
-     * @param $modulename
+     * @var string[] fileares to apply to all modules.
+     */
+    private $basefileareas = [
+        'content',
+        'intro',
+        'introattachment',
+        'package',
+        'mediafile'
+    ];
+
+    /**
+     * Helper method to get the module class by mod name.
+     *
+     * @param string $modulename name of module (i.e. 'wiki')
      * @return module
      */
     public static function get_module($modulename) {
@@ -87,6 +112,15 @@ class module {
         return new $class();
     }
 
+    /**
+     * Formatter method that takes a setting and value and converts
+     * it into a date/string representation of a bool etc.
+     *
+     * @param string $setting name of the field
+     * @param string $value the setting's value to convert
+     * @return string
+     * @throws \moodle_exception
+     */
     public function get_value($setting, $value) {
         switch ($setting) {
             case 'competency_rule':
@@ -109,6 +143,13 @@ class module {
         return $value;
     }
 
+    /**
+     * Converts int representation of aggregate to string
+     * representation.
+     *
+     * @param int $value
+     * @return string
+     */
     public function convert_aggregate_type($value) {
         $rm = new \rating_manager();
         $options = $rm->get_aggregate_types();
@@ -120,6 +161,13 @@ class module {
         return $value;
     }
 
+    /**
+     * Converts int representation of groupmode to string.
+     * representation.
+     *
+     * @param int $value
+     * @return string
+     */
     public function convert_groupmode($value) {
         switch ($value) {
             case NOGROUPS:
@@ -133,20 +181,72 @@ class module {
         return $value;
     }
 
+    /**
+     * Converts boolean to string representation of true/false.
+     *
+     * @param bool $value
+     * @return string
+     */
     public function convert_bool($value) {
         return $value ? get_string('true', 'report_activitylog') : get_string('false', 'report_activitylog');
     }
 
+    /**
+     * Converts timestamp to human readable date.
+     *
+     * @param bool $value
+     * @return string
+     */
     public function convert_date($value) {
         return userdate($value, get_string('strftimedatetimeshort', 'langconfig'));
     }
 
+    /**
+     * Gets array of filtered fields. Combines the base filters and
+     * any filters defined by the module as well.
+     *
+     * @return array
+     */
     public function get_filters() {
         return array_merge($this->basefilters, $this->modfilters);
     }
 
-    public function get_modfileareas() {
-        return $this->modfileareas;
+    /**
+     * Gets array of fileareas. Combines the base fileareas and
+     * any fileareas defined by the module as well.
+     *
+     * @return array
+     */
+    public function get_fileareas() {
+        return array_merge($this->basefileareas, $this->modfileareas);
     }
 
+    /**
+     * Takes an array of fields and returns a copy of the array
+     * without any fields that are filtered.
+     *
+     * @param array $fields
+     * @return array
+     */
+    public function remove_filtered_fields($fields) {
+        $filters = $this->get_filters();
+        $filteredfields = array_diff($fields, $filters);
+
+        // Check wildcard filter values.
+        foreach ($filters as $filter) {
+            if (strpos($filter, '*') === false) {
+                continue;
+            }
+
+            $pattern = '/' . str_replace('\\', '\\\\', str_replace('*', '.*', $filter)) . '/';
+
+            foreach ($filteredfields as $key => $filteredfield) {
+                if (preg_match($pattern, $filteredfield)) {
+                    unset($filteredfields[$key]);
+                }
+            }
+        }
+
+        return $filteredfields;
+    }
 }

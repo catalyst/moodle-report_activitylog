@@ -44,11 +44,9 @@ class filters extends \moodleform {
     public function definition() {
         $mform = $this->_form;
 
-        // Firstname.
         $mform->addElement('text', 'coursename', get_string('course'));
         $mform->setType('coursename', PARAM_TEXT);
 
-        // Lastname.
         $mform->addElement('text', 'courseidnumber', get_string('courseidnumber', 'report_activitylog'));
         $mform->setType('courseidnumber', PARAM_TEXT);
 
