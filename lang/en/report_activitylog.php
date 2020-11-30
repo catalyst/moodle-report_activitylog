@@ -23,9 +23,9 @@
  */
 
 
+$string['activitylogaudit'] = 'Activity settings changes';
 $string['changedby'] = 'Changed by';
 $string['changes'] = 'Changes';
-$string['activitylogaudit'] = 'Activity settings changes';
 $string['courseidnumber'] = 'Course ID number';
 $string['coursemodulecreated'] = 'Course module created';
 $string['coursemoduledeleted'] = 'Course module deleted';
@@ -34,8 +34,17 @@ $string['filesadded'] = 'Files added to {$a}';
 $string['form:coursename'] = 'Course name';
 $string['module'] = 'Module';
 $string['pluginname'] = 'Activity settings changes';
-$string['setting:advancedgradingmethod'] = 'Grading method';
+$string['privacy:metadata:report_activitylog'] = 'Log of changes made to the activity';
+$string['privacy:metadata:report_activitylog_settings'] = 'Last seen settings for an activity';
+$string['privacy:metadata:report_activitylog:activityid'] = 'Activity ID for the activity being updated';
+$string['privacy:metadata:report_activitylog:changes'] = 'List of changes made to the activity when it was updated';
+$string['privacy:metadata:report_activitylog:changetype'] = 'Identifier of the type of change, i.e. activity is being deleted';
+$string['privacy:metadata:report_activitylog:courseid'] = 'Course ID for the activity being updated';
+$string['privacy:metadata:report_activitylog:modifierid'] = 'User ID for the user updating the activity';
+$string['privacy:metadata:report_activitylog:timemodified'] = 'Time that the change was made';
+$string['privacy:metadata:report_activitylog:settings'] = 'The last seen settings for the activity';
 $string['setting:approval'] = 'Approval';
+$string['setting:advancedgradingmethod'] = 'Grading method';
 $string['setting:availabilityconditionsjson'] = 'Availability';
 $string['setting:assessed'] = 'Assessed';
 $string['setting:assesstimefinish'] = 'Assess time finish';
