@@ -46,7 +46,7 @@ class report_activitylog_observer {
             'activityid' => $event->objectid,
             'courseid' => $event->courseid,
             'modifierid' => $event->userid,
-            'changes' => \report_activitylog\activitylog::COURSE_MODULE_DELETED,
+            'changetype' => \report_activitylog\activitylog::COURSE_MODULE_DELETED,
             'settings' => null,
             'timemodified' => $event->timecreated,
         ];
