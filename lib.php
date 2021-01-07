@@ -50,6 +50,11 @@ function report_activitylog_extend_navigation_course($navigation, $course, $cont
 function report_activitylog_coursemodule_edit_post_actions($data, $course) {
 
     $cm = get_coursemodule_from_id('', $data->coursemodule);
+    $context = context_module::instance($cm->id);
+    if (!has_capability('moodle/course:manageactivities', $context)) {
+        return $data;
+    }
+
     $previoussettings = \report_activitylog\activitylog::get_previous_settings($data->coursemodule);
     $modulehelper = \report_activitylog\modules\module::get_module($cm->modname);
     list($cm, $context, $module, $cmdata, $cw) = get_moduleinfo_data($cm, $course);
